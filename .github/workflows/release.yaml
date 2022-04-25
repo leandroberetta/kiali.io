@@ -1,0 +1,88 @@
+name: Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      release_type:
+        description: 'Release type'     
+        required: true
+        default: 'auto' 
+        type: choice
+        options:          
+          - minor
+      repository:
+        description: Repository (in owner/repo format)
+        required: true
+        default: leandroberetta/kiali.io
+        type: string          
+      releasing_branch:
+        description: Branch to release
+        required: true
+        default: staging
+        type: string           
+  
+jobs:
+  initialize:
+    name: Initialize
+    runs-on: ubuntu-20.04
+    outputs:
+      release_type: ${{ steps.release_type.outputs.release_type || github.event.inputs.release_type }}      
+      releasing_version: ${{ steps.releasing_version.outputs.releasing_version }}      
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+        with:
+          repository: ${{ github.event.inputs.repository }}
+          ref: ${{ github.event.inputs.releasing_branch }}      
+      
+      - name: Determine release type
+        id: release_type        
+        run: |        
+          echo "::set-output name=release_type::${{ github.event.inputs.release_type }}"               
+      
+      - name: Determine current version                  
+        id: current_version
+        run: echo "::set-output name=current_version::$(./.github/workflows/util/current_version.sh)"
+      
+      - name: Determine releasing version        
+        id: releasing_version
+        env:
+          CURRENT_VERSION: ${{ steps.current_version.outputs.current_version }}
+        run: |          
+          RAW_VERSION=$(echo "${CURRENT_VERSION:1}")
+          
+          echo "::set-output name=releasing_version::v$(./.github/workflows/util/semver bump minor $RAW_VERSION)"          
+      
+      - name: Log information
+        run: |
+          echo "Release type: ${{ steps.release_type.outputs.release_type }}"                  
+          
+          echo "Current version: ${{ steps.current_version.outputs.current_version }}"
+
+          echo "Releasing version: ${{ steps.releasing_version.outputs.releasing_version }}"
+
+  release:
+    name: Release
+    runs-on: ubuntu-20.04
+    needs: [initialize]
+    env:      
+      RELEASING_VERSION: ${{ needs.initialize.outputs.releasing_version }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+        with:
+          repository: ${{ github.event.inputs.repository }}
+          ref: ${{ github.event.inputs.releasing_branch }}    
+            
+      - name: Configure git
+        run: |
+          git config user.email 'lea.beretta@gmail.com'
+          
+          git config user.name 'leandroberetta'
+        
+      - name: Create release
+        run: |          
+          echo "Resolved current website version: $RELEASING_VERSION"
+          
+          ./scripts/release.sh -cv $RELEASING_VERSION -rn origin -gd true
+          
