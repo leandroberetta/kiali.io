@@ -108,7 +108,7 @@ if [ "${GENERATE_DOCS}" == "true" ]; then
   echo "===== Generate the CRD schema documentation"
   make gen-crd-doc
 
-  if ! git commit -am "Auto-generated CRD schema documentation" then
+  if ! git commit -am "Auto-generated CRD schema documentation"; then
     if [ "$(git status -s | wc -l)" != "0" ]; then
       echo "ERROR! Failed to commit changes. Aborting."
       exit 1
