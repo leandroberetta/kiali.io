@@ -109,8 +109,12 @@ if [ "${GENERATE_DOCS}" == "true" ]; then
   make gen-crd-doc
   git commit -am "Auto-generated CRD schema documentation"
 
-  echo "===== Push the branch [${STAGING_BRANCH}] to remote [${REMOTE_NAME}]"
-  git push ${REMOTE_NAME} ${STAGING_BRANCH}
+  if [ "$(git status --porcelain)" == "0" ]; then
+    echo "===== Push the branch [${STAGING_BRANCH}] to remote [${REMOTE_NAME}]"
+    git push ${REMOTE_NAME} ${STAGING_BRANCH}
+  else
+    echo "===== No changes to CRD schema documentation"
+  fi
 fi
 
 echo "===== Create a new version branch named [${CURRENT_VERSION}] based on branch [${CURRENT_BRANCH}]"
